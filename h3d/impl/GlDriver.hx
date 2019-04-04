@@ -871,12 +871,14 @@ class GlDriver extends Driver {
 		var outOfMem = false;
 
 		inline function checkError() {
+			#if !HEAPS_NO_GL_GET_ERROR
 			var err = gl.getError();
 			if( err == GL.OUT_OF_MEMORY ) {
 				outOfMem = true;
 				return true;
 			}
 			if( err != 0 ) throw "Failed to alloc texture "+t.format+"(error "+err+")";
+			#end
 			return false;
 		}
 
@@ -952,7 +954,9 @@ class GlDriver extends Driver {
 	}
 
 	inline function discardError() {
+		#if !HEAPS_NO_GL_GET_ERROR
 		gl.getError(); // make sure to reset error flag
+		#end
 	}
 
 	override function allocVertexes( m : ManagedBuffer ) : VertexBuffer {
@@ -968,7 +972,11 @@ class GlDriver extends Driver {
 		var tmp = new Uint8Array(m.size * m.stride * 4);
 		gl.bufferData(GL.ARRAY_BUFFER, tmp, m.flags.has(Dynamic) ? GL.DYNAMIC_DRAW : GL.STATIC_DRAW);
 		#end
+		#if HEAPS_NO_GL_GET_ERROR
+		var outOfMem = false;
+		#else
 		var outOfMem = gl.getError() == GL.OUT_OF_MEMORY;
+		#end
 		gl.bindBuffer(GL.ARRAY_BUFFER, null);
 		if( outOfMem ) {
 			gl.deleteBuffer(b);
@@ -987,7 +995,11 @@ class GlDriver extends Driver {
 		#elseif hl
 		gl.bufferDataSize(GL.ELEMENT_ARRAY_BUFFER, count * size, GL.STATIC_DRAW);
 		#end
+		#if HEAPS_NO_GL_GET_ERROR
+		var outOfMem = false;
+		#else
 		var outOfMem = gl.getError() == GL.OUT_OF_MEMORY;
+		#end
 		gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, null);
 		curIndexBuffer = null;
 		if( outOfMem ) {
@@ -1621,8 +1633,10 @@ class GlDriver extends Driver {
 		#end
 		#if (js || hl)
 		gl.readPixels(x, y, pixels.width, pixels.height, getChannels(curTarget.t), curTarget.t.pixelFmt, buffer);
+		#if !HEAPS_NO_GL_GET_ERROR
 		var error = gl.getError();
 		if( error != 0 ) throw "Failed to capture pixels (error "+error+")";
+		#end
 		@:privateAccess pixels.innerFormat = curTarget.format;
 		#end
 	}
